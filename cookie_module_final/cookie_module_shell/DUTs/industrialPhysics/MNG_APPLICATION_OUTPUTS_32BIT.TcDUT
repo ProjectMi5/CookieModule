@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <DUT Name="MNG_APPLICATION_OUTPUTS_32BIT" Id="{d6342fe3-9098-44ab-bc00-4a4906d5dfca}">
+    <Declaration><![CDATA[
+TYPE MNG_APPLICATION_OUTPUTS_32BIT :
+STRUCT
+    NumSignals                     : INT     := 4         ;
+    Disc_00_ACT_POS : REAL    := 0.0; (* ysics/Keksmodul/Keksmodul - relevant/Disc?KinActual *)
+    A2014_09_12_Left_Predeterminado_00_ACT_POS : REAL    := 0.0; (* nt/Scissor/2014_09_12_Left_Predeterminado?KinActual *)
+    A2014_09_12_Right_Predeterminado_00_ACT_POS : REAL    := 0.0; (* t/Scissor/2014_09_12_Right_Predeterminado?KinActual *)
+    Keksquelle_00_TRIG02 : BOOL    := 0; (* Physics://physics/Keksmodul/Keksquelle?Trigger *)
+END_STRUCT
+END_TYPE
+
+
+]]></Declaration>
+    <ObjectProperties />
+  </DUT>
+</TcPlcObject>

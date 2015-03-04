@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="MAIN" Id="{9ff952db-2989-4584-8223-db66e71283a0}">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR											//FBI = function block instance
+	FBI_init			: FB_Init;			//Comment here	
+	FBI_output			: FB_Output;		//Comment here	
+	FBI_refill			: FB_Refill;		//Comment here	
+	FBI_separation		: FB_Separation;	//Comment here	
+	FBI_ready			: FB_Ready;			//Comment here	
+	FBI_emergencyStop 	: FB_EmergencyStop;	//Comment here	
+	FBI_error 			: FB_error;			//Comment here	
+	FBI_storageLevel	: FB_StorageLevel;	//Comment here
+	FBI_resetSystem		: FB_ResetSystem;  
+	
+	//Interface variables:
+	FBI_Timer			: TOF;				//Comment here	
+		
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// @TODO measure position of slide against position sensor of XTS
+
+//----------------------------------------- Error handling and emergency stop ------------------------------------------
+axis.ReadStatus();
+
+//reset system
+IF (Mi5.reset) THEN
+	GVL.mainState := eMainState.resetSystem;
+	
+//Emergency Stop Watchdog!
+ELSIF Module2101.Input.EmergencyStop THEN
+	GVL.mainState := eMainState.emergencyStop;
+
+//error handling
+ELSIF (axis.Status.Error) THEN
+	GVL.mainState := eMainState.error;
+
+END_IF
+
+//------------------------------------------------ OPC UA and module init --------------------------------------------------------------
+
+//Connection Test
+Module2101.Output.ConnectionTestOutput := Module2101.Input.ConnectionTestInput;
+//positionsweitergabe an process tool
+Module2101.Output.PositionOutput := Module2101.Input.PositionInput + 143; 
+
+//module positioning (by fj)
+FBI_Timer();
+IF GVL.init_sensor THEN
+	Module2101.Output.PositionSensor := TRUE;
+	FBI_Timer(IN := TRUE,PT := T#400MS);
+	FBI_Timer(IN := FALSE,PT := T#400MS);
+ELSE
+	Module2101.Output.PositionSensor := FBI_Timer.Q;
+END_IF
+
+//----------------------------------------------- cookie function process and parameter reading ----------------------------------------------------
+
+//calculate storage level
+FBI_storageLevel();
+
+
+//----------------------------------------------- pseudo function block calls ----------------------------------------------------------------------
+CASE GVL.mainState OF
+
+	eMainState.init: //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		//init of state whereever the position of the disk is
+		FBI_init();				
+	
+	eMainState.ready: //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		//cookie is on the clamps, waiting for putting it on the mover
+		FBI_ready();
+		
+	eMainState.output: //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		//now open the clamps and let the cookie go down
+		FBI_output();
+
+	eMainState.refill: //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		//cookie storage empty --> needs to be refilled
+		FBI_refill();
+	
+	eMainState.separation:	//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		//take a new cookie and bring it to the output clamps
+		FBI_separation();
+		
+	eMainState.emergencyStop: //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		// manually set emergency stop
+		FBI_emergencyStop();
+		
+	eMainState.error: //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		//error state
+		FBI_error(); 
+		
+	eMainState.resetSystem: //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+		//error state
+		FBI_resetSystem(); 
+
+END_CASE]]></ST>
+    </Implementation>
+    <ObjectProperties />
+  </POU>
+</TcPlcObject>

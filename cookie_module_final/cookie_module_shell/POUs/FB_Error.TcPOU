@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="FB_Error" Id="{eb4c0383-d376-4d5b-9974-7a074746d96c}">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Error
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	resetAxis			: FB_ResetAxis;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//@TODO: implement all possible errors
+
+CASE errorSubState OF
+
+	step0:	Module2101.Output.SkillOutput.SkillOutput0.Busy := FALSE;
+			Module2101.Output.SkillOutput.SkillOutput0.Done := FALSE;
+			Module2101.Output.SkillOutput.SkillOutput0.Dummy := FALSE;
+			Module2101.Output.SkillOutput.SkillOutput0.Error := TRUE;
+			Module2101.Output.SkillOutput.SkillOutput0.Ready := FALSE;
+			
+			// Error: axis got stuck
+			IF (axis.Status.ErrorID = 17744) THEN
+				Module2101.Output.ErrorDescription := 'Axis got stuck. Please clear module.';
+				Module2101.Output.ErrorID := 101;
+				errorSubState := step1;
+			END_IF
+			
+			IF (Module2101.Output.ErrorID = 0) THEN
+				Module2101.Output.ErrorDescription := 'Unknown Error.';
+				Module2101.Output.ErrorID := 199;
+				errorSubState := step1;
+			END_IF
+			
+			//change in the right error state
+			Module2101.Output.CurrentTaskDescription := 'Error';
+			Module2101.Output.Error := TRUE;
+			
+	step1:	//wait for process tool to set the module in manual mode
+			IF(Module2101.Input.Mode = DUT_MODE.Manual) THEN
+				resetAxis(execute:= FALSE);
+				errorSubState := step2;
+			END_IF
+			
+	step2:	IF NOT resetAxis.done THEN
+				// axreset
+				resetAxis (execute := TRUE);
+			ELSE			
+				errorSubState := step3;
+			END_IF
+			
+	step3:	//wait for process tool to set the module in init mode
+			IF(Module2101.Input.Mode = DUT_MODE.Auto) THEN
+				
+				//reset error 
+				Module2101.Output.Error := FALSE;
+				Module2101.Output.ErrorDescription := '';
+				Module2101.Output.ErrorID := 0;
+				
+				//change to init state
+				initSubState := step0;
+				errorSubState := step0;
+				mainState := eMainState.init;				
+			END_IF
+END_CASE
+]]></ST>
+    </Implementation>
+    <ObjectProperties />
+  </POU>
+</TcPlcObject>

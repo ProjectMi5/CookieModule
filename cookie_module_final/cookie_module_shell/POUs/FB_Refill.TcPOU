@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="FB_Refill" Id="{9061f4bf-3136-4880-ae3d-68799f132320}">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Refill
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE refillSubState OF
+
+	step0:	//go in the right error state
+			Module2101.Output.CurrentTaskDescription := 'CookieStorage empty. Switching to refill mode.';
+			Module2101.Output.ErrorID := 1;
+			Module2101.Output.Error := TRUE;
+			Module2101.Output.ErrorDescription := 'storage empty. please refill';
+			
+			//wait for process tool to set the module in manual mode
+			IF(Module2101.Input.Mode = DUT_MODE.Manual) THEN
+				refillSubState := step1;
+			END_IF
+			
+	step1:	//wait for process tool to set the module in init mode
+			IF(Module2101.Input.Mode = DUT_MODE.Auto) THEN
+				//reset error 
+				Module2101.Output.Error := FALSE;
+				Module2101.Output.ErrorDescription := '';
+				Module2101.Output.ErrorID := 0;
+				
+				//change to init state
+				initSubState := step0;
+				mainState := eMainState.init;
+				refillSubState := step0;
+			END_IF
+END_CASE]]></ST>
+    </Implementation>
+    <ObjectProperties />
+  </POU>
+</TcPlcObject>

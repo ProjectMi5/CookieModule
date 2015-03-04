@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="FB_TurnDiskToSensor" Id="{fabff150-5e7f-488c-a302-8037361be8dd}">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TurnDiskToSensor
+
+VAR_INPUT
+	targetVel		: INT;	//Comment here
+	sensor			: BOOL;	//Comment here
+	execute			: bool;
+END_VAR
+
+VAR_OUTPUT
+	done 			: BOOL;	//Comment here
+END_VAR
+
+VAR
+	state		: INT := -10;				//Comment here
+	power		: Tc2_MC2.MC_Power;			//Comment here
+	turnDisk	: Tc2_MC2.MC_MoveVelocity;	//Comment here
+	haltDisk	: Tc2_MC2.MC_Halt;			//Comment here
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF (execute) THEN
+	power(																		//enable power every cycle
+		Axis			:= axis , 
+		Enable			:= TRUE , 
+		Enable_Positive	:= TRUE , 
+		Enable_Negative	:= TRUE , 
+		);
+	
+	CASE state OF 
+	 
+	-10:	//Comment here
+			done := FALSE;
+
+			IF (power.Status AND NOT power.Error) THEN
+				state := 0;
+			END_IF
+		
+	0:		//Comment here
+			turnDisk(Axis:= axis , Execute:= FALSE);					//rising Edge
+			turnDisk(Axis:= axis , Execute:= TRUE, Velocity:=targetVel, Direction:= MC_Positive_Direction);
+			state := 10;
+			
+	10:		//Comment here
+			IF (NOT sensor) THEN										//turnDisk until input variable is true
+				turnDisk(Axis:= axis);
+			
+			ELSE 
+				GVL.SensorPosition :=axis.NcToPlc.ModuloActPos;				
+				turnDisk(Axis:= axis, Execute:= FALSE);
+				haltDisk(Axis:= axis, Execute:= TRUE);
+				state := 20;
+			END_IF
+			
+	20: 	IF (NOT haltDisk.Done) THEN									//stop turning disk
+				haltDisk(Axis:= axis, Execute:= TRUE);
+			ELSE
+				haltDisk(Axis:= axis, Execute:= FALSE);
+				done 	:= TRUE;
+				execute := FALSE;
+				state	:= -10;
+			END_IF
+	
+	END_CASE
+
+ELSE
+	state := -10;
+	turnDisk(Axis:= axis , Execute:= FALSE);
+END_IF]]></ST>
+    </Implementation>
+    <ObjectProperties />
+  </POU>
+</TcPlcObject>

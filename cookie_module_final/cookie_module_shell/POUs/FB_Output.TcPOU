@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="FB_Output" Id="{993830a5-14f0-4acf-99d4-9a0e2c4d6108}">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Output
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	turnDiskModFast			: FB_TurnDiskModulo;
+	timer					: FB_Timer;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE outputSubState OF
+	
+	step0:	//set OPC state variables
+ 			Module2101.Output.SkillOutput.SkillOutput0.Ready := FALSE;
+			Module2101.Output.SkillOutput.SkillOutput0.Busy := TRUE;
+			//reset move functions
+			turnDiskModFast(execute := FALSE);
+			outputSubState := step1;			
+
+	step1:	//check position of cookie gap
+			IF(axis.NcToPlc.ModuloActPos < 5 OR axis.NcToPlc.ModuloActPos > 355) THEN //storage
+				outputSubState := step2;
+			ELSIF (axis.NcToPlc.ModuloActPos < 182 OR axis.NcToPlc.ModuloActPos > 172) THEN
+				outputSubState := step3;
+			END_IF
+		
+	step2:	//turn disk 90° to open clamps and put cookie on XTS mover
+			turnDiskModFast(targetPos:= 270, targetVel:= fastVel, direction:= Tc2_MC2.MC_Negative_Direction, execute:= TRUE);
+			IF (turnDiskModFast.done) THEN
+				outputSubState := step4;
+			END_IF
+	
+	step3:	//turn disk 90° to open clamps and put cookie on XTS mover
+			turnDiskModFast(targetPos:= 90, targetVel:= fastVel, direction:= Tc2_MC2.MC_Negative_Direction, execute:= TRUE);
+			IF (turnDiskModFast.done) THEN
+				outputSubState := step4;
+			END_IF
+			
+	step4:	//tell process tool that cookie is on mover
+			Module2101.Output.SkillOutput.SkillOutput0.Busy := FALSE;
+			Module2101.Output.SkillOutput.SkillOutput0.Done := TRUE;
+			outputSubState := step5;
+			
+	step5:	// if it was not the first cookie on mover, wait for the XTS to press against iron sheet
+			IF (Module2101.Input.SkillInput.SkillInput0.ParameterInput.Parameterinput0.Value = 0) THEN
+				outputSubState := step6;
+			ELSE
+				outputSubState := step7;
+			END_IF
+			timer(execute := FALSE);
+			
+	step6:	//waiting time if not first cookie
+			timer(iTime:= T#5S, execute:= TRUE);
+			IF (timer.done) THEN
+				outputSubState := step7;
+				timer(execute := FALSE);
+			END_IF
+			
+	step7:	//OPC UA communication
+			IF (NOT Module2101.Input.SkillInput.SkillInput0.Execute) THEN
+				Module2101.Output.SkillOutput.SkillOutput0.Done := FALSE;
+				outputSubState := step8;
+			END_IF
+			
+	step8:	//change into separation state
+			mainState := eMainState.separation;	
+			outputSubState := step0;
+END_CASE
+]]></ST>
+    </Implementation>
+    <ObjectProperties />
+  </POU>
+</TcPlcObject>

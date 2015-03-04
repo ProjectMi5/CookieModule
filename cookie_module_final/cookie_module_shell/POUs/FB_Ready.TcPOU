@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="FB_Ready" Id="{71d9dff5-d23a-4c84-bde7-a6053dac4ec3}">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Ready
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	execute : bool := false;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF (NOT (Module2101.Input.PositionInput = -1)) THEN
+	
+	//set OPC UA variable -> state ready
+	Module2101.Output.SkillOutput.SkillOutput0.Ready := TRUE;
+	
+	//wait for execute signal and the n change state to output
+	IF(Module2101.Input.SkillInput.SkillInput0.Execute) THEN
+		//order received
+		Module2101.Output.SkillOutput.SkillOutput0.Ready := FALSE;
+		mainState:=eMainState.output;
+	END_IF
+
+END_IF]]></ST>
+    </Implementation>
+    <ObjectProperties />
+  </POU>
+</TcPlcObject>

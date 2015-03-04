@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="FB_StorageLevel" Id="{8860c111-414c-4d6c-bd40-8010277ef819}">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_StorageLevel
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	calculatedCookies		: LREAL;
+	remainingCookies 		: INT;	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//Comment here	
+IF (GVL.iStorageLevel > 226000) THEN
+    GVL.empty:=TRUE;
+	remainingCookies := 0;
+// configuration for all cookies (not as acurate)
+ELSE
+    GVL.empty:=FALSE;
+	calculatedCookies := (231000 - GVL.iStorageLevel)/5247;
+	remainingCookies := REAL_TO_INT(calculatedCookies);
+END_IF
+
+
+Module2101.Output.StateValue.StateValue0.Name := 'Remaining cookies';
+Module2101.Output.StateValue.StateValue0.Description := 'Number of remaining cookies in storage.';
+Module2101.Output.StateValue.StateValue0.Dummy := FALSE;
+Module2101.Output.StateValue.StateValue0.Value := remainingCookies;
+
+IF (remainingCookies = 1) THEN
+	Module2101.Output.StateValue.StateValue0.Unit := 'Cookie';
+ELSE
+	Module2101.Output.StateValue.StateValue0.Unit := 'Cookies';
+END_IF
+
+(*
+
+//configuration for bright cookies
+ELSE
+    empty:=FALSE;
+	calculatedCookies := (231000 - GVL.iStorageLevel)/5129;
+	remainingCookies := REAL_TO_INT(calculatedCookies);
+END_IF;
+
+//configuration for dark cookies
+ELSE
+    empty:=FALSE;
+	calculatedCookies := (231000 - GVL.iStorageLevel)/5366;
+	remainingCookies := REAL_TO_INT(calculatedCookies);
+END_IF;
+
+*)]]></ST>
+    </Implementation>
+    <ObjectProperties />
+  </POU>
+</TcPlcObject>

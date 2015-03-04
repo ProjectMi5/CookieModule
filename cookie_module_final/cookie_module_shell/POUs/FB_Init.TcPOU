@@ -1,0 +1,143 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="FB_Init" Id="{08132d8b-3fed-49ef-9294-a5c6dd06605d}">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Init
+VAR_INPUT
+END_VAR
+VAR_OUTPUT	
+END_VAR
+VAR
+	turnDiskSensor	: FB_TurnDiskToSensor;		//turns disk to next sensor anti-clockwise
+	turnDiskMod		: FB_TurnDiskModulo;		//turns disk back due to lag while stopping
+	setPosition		: Tc2_MC2.MC_SetPosition;	//for initializing the motor position to a certain value
+	resetAxis		: FB_ResetAxis;
+	timer			: FB_Timer;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE initSubState OF 
+	
+	step0:	// wait for everything to boot in first run
+			IF (firstRun) THEN
+				timer(iTime:=T#5S, execute := TRUE);
+				IF(timer.done) THEN
+					firstRun := FALSE;
+				END_IF
+			ELSE
+				initSubState := step1;
+			END_IF
+
+	step1:	turnDiskSensor(execute:= FALSE);
+			resetAxis(execute:= FALSE);
+			
+			//reset all substates
+			refillSubState := step0;
+			separationSubState := step0;
+			outputSubState := step0;
+			emergencySubState := step0;
+			errorSubState := step0;
+			
+			//>>>OPCUA Init<<<
+	
+			//>Modules<:
+			Module2101.Output.ID := 2101;
+			Module2101.Output.Name := 'Cookie Seperator';
+			Module2101.Output.IP := '192.168.175.213';
+			Module2101.Output.CurrentTaskDescription := 'Init process started: OPC UA';
+			Module2101.Output.Dummy := FALSE;
+			Module2101.Output.Idle  := FALSE;
+			Module2101.Output.Error := FALSE;
+			Module2101.Output.ErrorDescription := '';
+			Module2101.Output.ErrorID := 0;
+					
+			//>Skill<: [0]=separate cookie
+			Module2101.Output.SkillOutput.SkillOutput0.ID := 1010;
+			Module2101.Output.SkillOutput.SkillOutput0.Activated := TRUE;
+			Module2101.Output.SkillOutput.SkillOutput0.Busy := TRUE;
+			Module2101.Output.SkillOutput.SkillOutput0.Done := FALSE;
+			Module2101.Output.SkillOutput.SkillOutput0.Dummy := FALSE;
+			Module2101.Output.SkillOutput.SkillOutput0.Error := FALSE;
+			Module2101.Output.SkillOutput.SkillOutput0.Ready := FALSE;
+			
+			//initialize position input with value -1
+			IF (NOT GVL.modulePositionInitialized)THEN
+				Module2101.Input.PositionInput := -1;
+				GVL.modulePositionInitialized := TRUE;
+			END_IF
+			
+			IF (axis.Status.StandStill OR axis.Status.ErrorStop OR axis.Status.Disabled) THEN
+				initSubState := step2;	
+			END_IF
+			
+	
+	step2:	IF NOT resetAxis.done THEN
+				// axreset
+				resetAxis (execute := TRUE);
+			ELSE
+				initSubState := step3;
+			END_IF
+			
+			
+	step3:		//Turning Disk clockwise till one of both sensors is detected
+				turnDiskSensor(targetVel:= fastVel, sensor:= (iDiskPosition = 2 OR iDiskPosition = 1), execute := TRUE); 
+				
+				IF (turnDiskSensor.done) THEN
+					turnDiskMod(execute:=FALSE);
+					initSubState := step4;		
+				END_IF
+			
+	step4:	//turn back to SensorPosition due to lag while stopping
+			turnDiskMod(targetPos:= GVL.SensorPosition , targetVel:= fastVel, direction:= Tc2_MC2.MC_Negative_Direction, execute:= TRUE);
+			
+			IF (turnDiskMod.done AND (iDiskPosition = 2)) THEN
+				//if Disk at storage --> step 2	
+				initSubState := step5;		
+			ELSIF (turnDiskMod.done AND (iDiskPosition = 1)) THEN
+				//if Disk at ramp 	 --> step 3
+				initSubState := step7;
+			END_IF
+	
+	step5:	//initializing the motor position to a certain value (0)
+			setPosition(Axis:= axis, Execute:= FALSE);	//rising edge
+			setPosition(Axis:= axis, Execute:= TRUE, Position:= 0, Mode:= FALSE);
+			
+			initSubState := step6;
+			
+	step6:	
+			//set storage position to 0
+			IF (NOT setPosition.Done) THEN
+				setPosition(Axis:= axis, Execute:= TRUE, Position:= 0, Mode:= FALSE);
+			ELSE
+				setPosition(Axis:= axis, Execute:= FALSE);
+				GVL.infinitsimu2 := TRUE;
+				initSubState := step9;
+			END_IF
+			
+	step7:	//initializing the motor position to a certain value (180)
+			setPosition(Axis:= axis, Execute:= FALSE);	//rising edge
+			setPosition(Axis:= axis, Execute:= TRUE, Position:= 180, Mode:= FALSE);
+			
+			initSubState := step8;
+			
+	step8:		//set storage position to 180
+			IF (NOT setPosition.Done) THEN				//set internal Position to 180 (=ramp)
+				setPosition(Axis:= axis, Execute:= TRUE, Position:= 180, Mode:= FALSE);
+			ELSE
+				setPosition(Axis:= axis, Execute:= FALSE);
+				infinitsimu := TRUE;		
+				initSubState := step9;
+			END_IF
+			
+	
+	step9:	//if Cookie is in output --> mainState = ready
+			IF (NOT iNoCookieInOutput) THEN					
+				GVL.mainState := eMainState.ready;
+			ELSE
+				//if no Cookie is in output --> mainState = separation
+				GVL.mainState := eMainState.separation;	
+			END_IF
+			initSubState := step0;
+END_CASE]]></ST>
+    </Implementation>
+    <ObjectProperties />
+  </POU>
+</TcPlcObject>

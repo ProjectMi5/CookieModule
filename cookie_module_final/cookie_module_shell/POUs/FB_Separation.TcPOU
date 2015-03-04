@@ -1,0 +1,145 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="FB_Separation" Id="{86df8c56-1720-40b3-ac7b-8d96ba74ae68}">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Separation
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	turnDiskModFast			: FB_TurnDiskModulo;
+	turnDiskModSlow			: FB_TurnDiskModulo;
+	storageLevel			: FB_StorageLevel;
+	timer					: FB_Timer;
+	timer2					: FB_Timer;
+	
+	counter					: INT := 1;
+	cookieBroken			: INT := 100;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE separationSubState OF
+
+	step0:	//set OPC state variables
+			Module2101.Output.SkillOutput.SkillOutput0.Busy := TRUE;
+			//reset all move functions
+			turnDiskModFast(execute := FALSE);
+			turnDiskModSlow(execute := FALSE);
+			
+			//check if possible to separate
+			IF (GVL.empty) THEN
+				//you have to refill
+				mainState:=eMainState.refill;	
+			ELSE
+			separationSubState:=step1;
+			END_IF
+
+	step1:	//check/bring cookieGap to storage
+			IF (axis.NcToPlc.ModuloActPos < 5 OR axis.NcToPlc.ModuloActPos > 355) THEN
+				separationSubState := step3;
+			ELSE
+				//move cookieGap to storage
+				separationSubState := step2;
+			END_IF
+			
+	step2:	//move cookieGap to storage in anti-clockwise to ensure the gap is empty
+			turnDiskModFast(targetPos:= 0, targetVel:= fastVel, direction:= Tc2_MC2.MC_Negative_Direction, execute:= TRUE);
+			IF (turnDiskModFast.done) THEN
+				separationSubState := step3;
+			END_IF
+			
+	step3:	//move cookieGap to wenglor camera test (280°) 
+			IF (MI5.cameraFix) THEN
+				separationSubState := step8;
+			ELSE
+				turnDiskModFast(targetPos:= 276, targetVel:= fastVel, direction:= Tc2_MC2.MC_Negative_Direction, execute:= TRUE);
+				IF (turnDiskModFast.done) THEN
+					separationSubState := step4;
+					timer(execute:= FALSE);
+				END_IF
+			END_IF
+			
+	step4:	// check if cookie is broken or not (getting from cameraDetection)
+			timer(iTime:= T#1S, execute:= TRUE);
+			IF(timer.done) THEN
+				separationSubState := step5;
+				timer(execute:= FALSE);
+			END_IF;
+			
+	step5:	GVL.oTriggerCamera := TRUE;
+			timer2(iTime:= T#60MS, execute:= TRUE);
+			IF (timer2.done) THEN
+				GVL.oTriggerCamera := FALSE;
+				separationSubState := step6;
+				timer2(execute:= FALSE);
+			END_IF
+			
+	step6:	IF (counter < 10) THEN
+				counter := counter + 1;
+				IF (NOT iCookieIntact) THEN
+					cookieBroken := cookieBroken - 1;	
+				ELSIF (iCookieIntact) THEN
+						cookieBroken := cookieBroken + 1;		
+				END_IF
+				separationSubState := step5;
+			ELSE	
+				IF (cookieBroken < 100) THEN
+					separationSubState := step7;	
+				ELSIF (cookieBroken >= 100) THEN
+					separationSubState := step8;		
+				END_IF
+			END_IF
+			
+	step7:	// move cookieGap to the broken cookie output hole (backwards)
+			cookieBroken := 100;
+			counter := 1;
+			turnDiskModFast(targetPos:= 90, targetVel:= fastVel, direction:= Tc2_MC2.MC_Positive_Direction, execute:= TRUE);
+			IF(turnDiskModFast.done) THEN
+				separationSubState := step0;
+				// start with separation from beginning
+			END_IF
+			
+	step8:	// move cookieGap to the start of the mechanical broken cookie output (fast velocity)
+			cookieBroken := 100;
+			counter := 1;
+			turnDiskModFast(targetPos:= 200, targetVel:= fastVel, direction:= Tc2_MC2.MC_Negative_Direction, execute:= TRUE);
+			IF(turnDiskModFast.turnDisk.Active) THEN
+				separationSubState := step9;
+			END_IF	
+			
+	step9:	// move cookieGap to the end of the mechanical broken cookie output (slow velocity)
+			turnDiskModSlow(targetPos:= 178, targetVel:= slowVel, direction:= Tc2_MC2.MC_Negative_Direction, execute:= TRUE);
+			IF(turnDiskModSlow.turnDisk.Done) THEN
+				turnDiskModFast(execute:=FALSE);
+				turnDiskModSlow(execute:=FALSE);
+				separationSubState := step10;
+			END_IF
+			
+	step10:	// move cookieGap to the ramp(fast)
+			turnDiskModSlow(targetPos:= 180, targetVel:= slowVel, direction:= Tc2_MC2.MC_Positive_Direction, execute:= TRUE);
+			IF(turnDiskModSlow.done) THEN
+				separationSubState := step11;
+			END_IF
+			
+	step11:	// wait 5s for cookie to slide down the ramp
+			//@TODO: test how long cookie needs to slide down
+			//@TODO: implement error case if the cookie gets stuck on ramp
+			turnDiskModSlow(execute:=FALSE);
+			timer(iTime:=T#3S, execute := TRUE);
+			IF(timer.done) THEN
+				separationSubState := step12;
+				timer2(execute:= FALSE);
+			END_IF
+			
+	step12:	//check if cookie is in output, if not start from beginning
+			IF(NOT iNoCookieInOutput) THEN
+				Module2101.Output.SkillOutput.SkillOutput0.Busy := FALSE;
+				mainState := eMainState.ready;
+			END_IF
+			separationSubState := step0;
+END_CASE]]></ST>
+    </Implementation>
+    <ObjectProperties />
+  </POU>
+</TcPlcObject>

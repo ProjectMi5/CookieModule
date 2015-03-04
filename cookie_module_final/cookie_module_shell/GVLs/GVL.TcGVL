@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <GVL Name="GVL" Id="{7c45efa3-e1c2-4cfe-a920-126b52956dd3}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	pi : REAL := 3.14159;
+																
+	//<<Input Variables>>//
+	//iExecute				AT%I*	: BOOL; 			// is there a order to separate cookies? --> from database
+	//iClearence			AT%I*	: BOOL;				// did the user clear the refilling/maintenance process --> from HMI
+														//@TODO: change to Mode change? mode: init, auto, manual
+	//iEmergencyStop		AT%I*	: BOOL;				// stop all running tasks and transform the machine in a safe state
+	
+	iDiskPosition 		AT%I*	: INT; 				// is the gap of the disk at the storage? --> 2 the ramp? --> 1 --> from hall sensor
+	iNoCookieInOutput	AT%I*	: BOOL;				// is the cookie in the ouput (on the clamp)? --> from light barrier sensor
+	iStorageLevel 		AT%I*	: DINT;			// number of remaining cookies in the storage --> from distance sensor
+	iCookieIntact		AT%I*	: BOOL;				// camera detection if cookie intact or broken
+	
+
+	//<<Output Variables>>//
+	oTriggerCamera		AT%Q*	: BOOL	:= FALSE;	//Variable to init the flashing mode of the cam		
+	
+	//<<Internal Variables>>//
+	mainState 					: eMainState		:= eMainState.init;
+	refillSubState				: eSubState			:= eSubState.step0;
+	separationSubState			: eSubState			:= eSubstate.step0;
+	initSubState				: eSubState			:= eSubstate.step0;
+	outputSubState				: eSubState			:= eSubstate.step0;
+	emergencySubState			: eSubState			:= eSubstate.step0;
+	errorSubState				: eSubState			:= eSubstate.step0;
+	resetSubState				: eSubState			:= eSubstate.step0;
+
+	axis	 					: AXIS_REF;
+	empty						: BOOL;				// is cookie storage empty
+	fastVel						: INT	:= 40;		//@TODO: Use something to change velocity in ParameterInput
+	slowVel						: INT	:= 15;		//@TODO: Use something to change velocity in ParameterInput
+	
+	modulePositionInitialized	: BOOL := FALSE;	// is the module position initialized
+	firstRun					: BOOL := TRUE;		// is this the first init? then wait for axis to get ready
+	
+	
+	//<<For Simulation>>//
+	offset						: LREAL;
+	infinitsimu					: BOOL;
+	infinitsimu2				: BOOL;
+	init_sensor AT	%I*			: BOOL;
+	SensorPosition				: LREAL;				
+	
+END_VAR]]></Declaration>
+    <ObjectProperties />
+  </GVL>
+</TcPlcObject>
