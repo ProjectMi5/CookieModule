@@ -1,11 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
-  <POU Name="MNG_UPDATEIOS" Id="{50833e43-c32f-45fd-b2ac-1d666f9cf57f}">
+  <POU Name="MNG_UPDATEIOS" Id="{2477571a-7bf0-44f3-95eb-9fa6eae37f0f}">
     <Declaration><![CDATA[FUNCTION_BLOCK MNG_UpdateIOs
 (* This function block implements simple TCP/IP client protocol.              *)
 (* The max. size of binary tx/rx data has to be <= PLCPRJ_BUFFER_SIZE         *)
 VAR_IN_OUT
     Outputs : MNG_Application_Outputs_32Bit;    (* Tx user data *)
+    Inputs      : MNG_Application_Inputs_32Bit                        ; (* Rx user data *)
 END_VAR
 
 VAR_INPUT
@@ -18,7 +19,6 @@ END_VAR
 
 VAR_OUTPUT
     errors      : FB_LogFifo                                          ; (* Error message fifo *)
-    Inputs      : MNG_Application_Inputs_32Bit                        ; (* Rx user data *)
     eState      : E_SocketConnectionState      := eSOCKET_DISCONNECTED; (* TCP/IP connection state *)
 END_VAR
 

@@ -1,5 +1,6 @@
-﻿<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.23">
-  <POU Name="FB_LogFifo" Id="{49f5ccd8-8dd1-4855-8cab-976bbe1a7e7b}">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="FB_LogFifo" Id="{83c75ee4-04e1-4d76-a2b7-cb32d0da9bfa}">
     <Declaration><![CDATA[(* Log/debug/error message fifo *)
 FUNCTION_BLOCK FB_LogFifo
 VAR_INPUT
@@ -20,46 +21,12 @@ VAR
 	buffer		: ARRAY[0..PLCPRJ_BUFFER_SIZE] OF BYTE;(* Internal buffer memory *)
 	sSource		: T_MaxString;	
 	sPut		: T_MaxString;
-END_VAR]]></Declaration>
+END_VAR
+]]></Declaration>
     <Implementation>
       <ST><![CDATA[;]]></ST>
     </Implementation>
-    <Action Name="Remove" Id="{6b0289a3-0420-495a-b5d4-7be8554058f0}">
-      <Implementation>
-        <ST><![CDATA[(* Removes oldest fifo entry *)
-IF nCount = 0 THEN
-	sGet := '';
-	bOk := FALSE;
-	RETURN;
-END_IF
-
-fbBuffer.A_RemoveHead( pBuffer:= ADR(buffer), cbBuffer:= SIZEOF(buffer),
-						getValue=>sGet, bOk=>bOk, nCount=>nCount );
-]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="Clear" Id="{a06f0790-f007-4a05-80fc-f313f6b76962}">
-      <Implementation>
-        <ST><![CDATA[(* Clears all fifo entries *)
-fbBuffer.A_Reset( 	pBuffer := ADR( buffer ), cbBuffer := SIZEOF( buffer ), 
-					bOk=>bOk, nCount=>nCount, getValue=>sGet ); 
-]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="Message" Id="{b5655b6e-62ec-427f-ba54-c42c6ee8d2be}">
-      <Implementation>
-        <ST><![CDATA[(* Adds new fifo entry *)
-sPut := CONCAT( CONCAT( sPrefix, sMessage ), CONCAT( '::', HSOCKET_TO_STRING(hSocket) ) );
-fbBuffer.A_AddTail( pBuffer:= ADR(buffer), cbBuffer:= SIZEOF(buffer),
-					putValue:= sPut, bOk=>bOk, nCount=>nCount );
-IF bOk THEN
-	IF bLog THEN(* Log information message *)
-		ADSLOGSTR( ADSLOG_MSGTYPE_HINT OR ADSLOG_MSGTYPE_LOG, '%s', sPut );	
-	END_IF
-END_IF]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="Error" Id="{efd0bbe6-b88b-463b-a8a6-30761da3ab2e}">
+    <Action Name="Error" Id="{51a9b6fc-e476-4c26-a504-ec7a5c6a1f1e}">
       <Implementation>
         <ST><![CDATA[(* Adds new fifo entry *)
 IF nErrID = 0 THEN
@@ -98,6 +65,41 @@ IF bOk THEN
 		ADSLOGSTR( ADSLOG_MSGTYPE_ERROR OR ADSLOG_MSGTYPE_LOG, '%s', sPut );	
 	END_IF
 END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Message" Id="{9bf66363-7e2c-4309-9697-8e281dbab741}">
+      <Implementation>
+        <ST><![CDATA[(* Adds new fifo entry *)
+sPut := CONCAT( CONCAT( sPrefix, sMessage ), CONCAT( '::', HSOCKET_TO_STRING(hSocket) ) );
+fbBuffer.A_AddTail( pBuffer:= ADR(buffer), cbBuffer:= SIZEOF(buffer),
+					putValue:= sPut, bOk=>bOk, nCount=>nCount );
+IF bOk THEN
+	IF bLog THEN(* Log information message *)
+		ADSLOGSTR( ADSLOG_MSGTYPE_HINT OR ADSLOG_MSGTYPE_LOG, '%s', sPut );	
+	END_IF
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Remove" Id="{b10b4ad8-92a4-4d76-adc7-bcd65a42ab4a}">
+      <Implementation>
+        <ST><![CDATA[(* Removes oldest fifo entry *)
+IF nCount = 0 THEN
+	sGet := '';
+	bOk := FALSE;
+	RETURN;
+END_IF
+
+fbBuffer.A_RemoveHead( pBuffer:= ADR(buffer), cbBuffer:= SIZEOF(buffer),
+						getValue=>sGet, bOk=>bOk, nCount=>nCount );
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Clear" Id="{e2951a4b-20fe-4586-b131-12b96323fa27}">
+      <Implementation>
+        <ST><![CDATA[(* Clears all fifo entries *)
+fbBuffer.A_Reset( 	pBuffer := ADR( buffer ), cbBuffer := SIZEOF( buffer ), 
+					bOk=>bOk, nCount=>nCount, getValue=>sGet ); 
+]]></ST>
       </Implementation>
     </Action>
     <ObjectProperties />

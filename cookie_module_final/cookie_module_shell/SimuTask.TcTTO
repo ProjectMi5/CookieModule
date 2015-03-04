@@ -1,4 +1,5 @@
-﻿<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.23">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
   <Task Name="SimuTask" Id="{c987c2bf-eeaf-4ad7-89eb-96c5f127e115}">
     <!--CycleTime in micro seconds.-->
     <CycleTime>10000</CycleTime>

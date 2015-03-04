@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
-  <DUT Name="MNG_APPLICATION_INPUTS_32BIT" Id="{bb74a99c-edd7-44cb-a60a-8a0cdc2a4a74}">
+  <DUT Name="MNG_APPLICATION_INPUTS_32BIT" Id="{413e31a1-8a63-4a7e-b63f-9471650e1166}">
     <Declaration><![CDATA[
 TYPE MNG_APPLICATION_INPUTS_32BIT :
 STRUCT

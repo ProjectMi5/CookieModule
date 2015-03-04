@@ -14,13 +14,13 @@
     <LibraryReferences>{0f5467a9-8867-472d-98ec-f900a5bd6533}</LibraryReferences>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="DUTs\industrialPhysics\MNG_APPLICATION_INPUTS_32BIT.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\InternalDataTypes\eMainState.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\InternalDataTypes\eSubState.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="DUTs\industrialPhysics\MNG_APPLICATION_INPUTS_32BIT.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="DUTs\industrialPhysics\MNG_APPLICATION_OUTPUTS_32BIT.TcDUT">

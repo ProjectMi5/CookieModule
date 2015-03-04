@@ -1,17 +1,19 @@
-﻿<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.23">
-  <POU Name="MNG_SIMULATION" Id="{015ea545-ac9a-4748-b8d5-8a6a98a96c71}">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.0.25">
+  <POU Name="MNG_SIMULATION" Id="{1b4e7278-cbd9-4076-b70c-e2ebab6f8da1}">
     <Declaration><![CDATA[FUNCTION_BLOCK MNG_Simulation
 VAR_INPUT
     bEnable    : BOOL                          := FALSE;
-    outputs    : MNG_Application_Outputs_32Bit         ;
+    outputs AT %I*   : MNG_Application_Outputs_32Bit         ;
 END_VAR
 VAR_OUTPUT
-    inputs     : MNG_Application_Inputs_32Bit          ;
+    inputs AT %Q*  : MNG_Application_Inputs_32Bit          ;
 END_VAR
 VAR
-    ioUpdater  : MNG_UpdateIOs                 := (sRemoteHost := '192.168.175.222', nRemotePort := 5110);
+    ioUpdater  : MNG_UpdateIOs                 := (sRemoteHost := '192.168.42.31', nRemotePort := 5110);
     fbCloseAll : FB_SocketCloseAll;
     bCloseAll  : BOOL := TRUE;
+	trig		: BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -26,11 +28,51 @@ END_IF
 IF NOT fbCloseAll.bBusy THEN
 
     (* ------------------------------------- trigger data exchange ----------------------------------------------------------------------------*)
-    ioUpdater(Outputs := outputs, Inputs => inputs, bEnable := bEnable);
+    ioUpdater(Outputs := outputs, Inputs := inputs, bEnable := bEnable);
 
 END_IF
 
-]]></ST>
+// Application code follows here:
+
+{*IF GVL.infinitsimu THEN
+	outputs.Disc_00_ACT_POS := (REAL_TO_INT(GVL.SensorPosition -180 + GVL.axis.NcToPlc.ModuloActPos))MOD 360;
+ELSE
+	IF GVL.infinitsimu2 THEN
+		outputs.Disc_00_ACT_POS := (REAL_TO_INT(GVL.SensorPosition + GVL.axis.NcToPlc.ModuloActPos))MOD 360;
+	ELSE
+		outputs.Disc_00_ACT_POS := GVL.axis.NcToPlc.ModuloActPos;
+	END_IF	
+END_IF*}
+
+outputs.Disc_00_ACT_POS := GVL.axis.NcToPlc.ModuloSetPos;
+
+//storageLevel.full := inputs.kein_cookie_mehr_00_IR;
+
+outputs.A2014_09_12_Right_Predeterminado_00_ACT_POS := ABS(SIN(((GVL.axis.NcToPlc.ActPos*pi)/180)))*(-7);
+outputs.A2014_09_12_Left_Predeterminado_00_ACT_POS := ABS(SIN(((GVL.axis.NcToPlc.ActPos*pi)/180)))*(7);
+
+//GVL.iNoCookieInOutput := inputs.cookiebox_sensor_00_IR;
+//GVL.iDiskAtStorage := inputs.HallSensor1_00_IR;
+//GVL.iDiskAtRamp := inputs.HallSensor2_00_IR;
+
+GVL.init_sensor := inputs.cookiebox_sensor_00_IR;
+
+IF GVL.mainState = eMainState.ready THEN
+	trig := TRUE;
+ELSE 
+	trig := FALSE;
+END_IF
+
+//trigger(CLK:= trig, Q=> newCookie);
+IF trig THEN
+	outputs.Keksquelle_00_TRIG02 := TRUE;
+ELSE 
+	outputs.Keksquelle_00_TRIG02 := FALSE;
+END_IF 
+
+
+//outputs.Keksquelle_00_ReleaseTime := 60;
+//outputs.Keksquelle_00_AlwaysOn := TRUE;]]></ST>
     </Implementation>
     <ObjectProperties />
   </POU>
